@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Create a Multi-Signature Process</title>
+</head>
+<body>
+  <h1>Create a Multi-Signature Process</h1>
+  <form id="process-form">
+    <label for="signatoryIds">Select Signatory Users (comma-separated email addresses):</label>
+    <input type="text" id="signatoryIds" name="signatoryIds" required>
+    <br>
+
+    <label for="comments">Comments:</label>
+    <textarea id="comments" name="comments" rows="4" required></textarea>
+    <br>
+
+    <label for="picture">Upload a Picture:</label>
+    <input type="file" id="picture" name="picture" accept="image/*" required>
+    <br>
+
+    <button type="submit">Create Process</button>
+  </form>
+
+  <div id="message"></div>
+
+  <script>
+    async function connectMetamask() {
+      console.log("here")
+      if (typeof window.ethereum !== 'undefined') {
+        console.log("inside")
+        try {
+
+          const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+          const userMetamaskAddress = accounts[0];
+          return userMetamaskAddress;
+        } catch (error) {
+          console.error('Metamask connection failed:', error);
+          return null;
+        }
+      } else {
+        console.error('Metamask is not installed');
+        return null;
+      }
+    }
+
+    async function createProcess(userMetamaskAddress) {
+      // Get form input values
+      const signatoryIds = document.getElementById('signatoryIds').value;
+      const comments = document.getElementById('comments').value;
+      const picture = document.getElementById('picture').files[0];
+
+      // Create a FormData object to send the form data, including the picture
+      const formData = new FormData();
+      formData.append('signatoryIds', signatoryIds);
+      formData.append('comments', comments);
+      formData.append('picture', picture);
+
+      // Send the data to the backend
+      try {
+        const response = await fetch('http://localhost:3000/process/create', {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'X-Metamask-Wallet': userMetamaskAddress,
+          },
+        });
+
+        const data = await response.json();
+        document.getElementById('message').innerText = data.message;
+      } catch (error) {
+        document.getElementById('message').innerText = 'An error occurred.';
+      }
+    }
+
+    async function main() {
+      const userMetamaskAddress = await connectMetamask();
+
+      if (userMetamaskAddress) {
+        // Metamask connection was successful
+        document.getElementById('message').innerText = 'Connected to Metamask. Please create the process.';
+        
+        // Handle form submission
+        document.getElementById('process-form').addEventListener('submit', (event) => {
+          event.preventDefault();
+          createProcess(userMetamaskAddress);
+        });
+      } else {
+        document.getElementById('message').innerText = 'Metamask connection failed. Please install Metamask and try again.';
+      }
+    }
+
+    main();
+  </script>
+</body>
+</html>
